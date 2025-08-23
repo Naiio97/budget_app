@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+
+/* moje tokeny – klidně přidej/změň později */
+:root{
+  --bg:#0b0f16; --panel:rgba(255,255,255,.06); --card:rgba(255,255,255,.08);
+  --stroke:rgba(255,255,255,.12); --muted:#a2acb8; --accent:#6bd0ff;
+  --red:#ff6b6b; --green:#3ddc84; --blur:20px;
+}
+body{ background:var(--bg); color:#fff; }
+.glass{ background:var(--card); backdrop-filter:blur(var(--blur)); border:1px solid var(--stroke); border-radius:16px; }
+.hairline{ border-color:var(--stroke); }
