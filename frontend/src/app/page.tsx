@@ -6,30 +6,42 @@ const fmt = (n: number) =>
 export default function Page() {
   const incomes = transactions.filter(t => t.amountCZK > 0);
   const expenses = transactions.filter(t => t.amountCZK < 0);
-
   const sumIncome = incomes.reduce((a, b) => a + b.amountCZK, 0);
   const sumExpense = expenses.reduce((a, b) => a + Math.abs(b.amountCZK), 0);
   const net = sumIncome - sumExpense;
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-semibold">💰 Budget – Dashboard</h1>
-
-      {/* 3 „karty“ */}
+    <div className="space-y-4">
+      {/* Cards */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-        <Card title="Příjmy"  value={fmt(sumIncome)}  className="text-[var(--green)]" />
-        <Card title="Výdaje"  value={fmt(sumExpense)} className="text-[var(--red)]" />
+        <Card title="Příjmy"  value={fmt(sumIncome)}  color="var(--success)" />
+        <Card title="Výdaje"  value={fmt(sumExpense)} color="var(--danger)" />
         <Card title="Bilance" value={fmt(net)} />
       </div>
 
-      {/* Seznam posledních transakcí */}
-      <section className="glass p-4">
-        <div className="text-sm text-white/70 mb-2">Poslední transakce</div>
+      {/* Insight chip */}
+      <div className="inline-flex items-center gap-2 glass px-3 py-2 text-[13px] in-pop">
+        <span
+          className="w-1.5 h-1.5 rounded-full"
+          style={{ background: "linear-gradient(135deg,#007aff,#5ac8fa)" }}
+        />
+        <span className="text-[var(--muted)]">
+          Tento měsíc +12 % za „Jídlo venku“ oproti průměru 3 měsíců.
+        </span>
+      </div>
+
+      {/* Transactions list */}
+      <section className="glass overflow-hidden">
+        <div className="px-4 py-2 text-[13px] text-[var(--muted)] border-b hairline bg-white/50">
+          Poslední transakce
+        </div>
         <ul className="text-sm divide-y hairline">
           {transactions.map(t => (
-            <li key={t.id} className="py-2 flex items-center justify-between">
-              <div className="text-white/85">{t.rawDescription}</div>
-              <div className={t.amountCZK < 0 ? "text-[var(--red)]" : "text-[var(--green)]"}>
+            <li key={t.id} className="px-4 py-3 flex items-center justify-between hover:bg-white/50 transition">
+              <div className="text-[color:var(--ink)]">{t.rawDescription}</div>
+              <div
+                className={t.amountCZK < 0 ? "text-[color:var(--danger)]" : "text-[color:var(--success)]"}
+              >
                 {fmt(t.amountCZK)}
               </div>
             </li>
@@ -40,19 +52,13 @@ export default function Page() {
   );
 }
 
-function Card({
-  title,
-  value,
-  className = "",
-}: {
-  title: string;
-  value: string;
-  className?: string;
-}) {
+function Card({ title, value, color }: { title: string; value: string; color?: string }) {
   return (
-    <div className="glass p-4">
-      <div className="text-sm text-white/70">{title}</div>
-      <div className={`text-3xl font-semibold ${className}`}>{value}</div>
+    <div className="glass p-5 transition-transform duration-200 hover:scale-[1.01] in-pop">
+      <div className="text-[13px] text-[var(--muted)] mb-1">{title}</div>
+      <div className="text-3xl font-semibold tracking-tight" style={color ? { color } : undefined}>
+        {value}
+      </div>
     </div>
   );
 }
