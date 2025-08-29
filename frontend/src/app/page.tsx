@@ -32,7 +32,7 @@ export default function Page() {
 
       {/* Transactions list */}
       <section className="glass overflow-hidden">
-        <div className="px-4 py-2 text-[13px] text-[var(--muted)] border-b hairline bg-white/50">
+        <div className="px-4 py-2 text-[15px] text-[var(--muted)] border-b hairline">
           Poslední transakce
         </div>
         <ul className="text-sm divide-y hairline">
