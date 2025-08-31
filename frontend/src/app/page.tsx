@@ -1,4 +1,5 @@
 import { transactions } from "@/lib/mock-data";
+import TransactionsFeed from "@/components/TransactionsFeed"
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK" }).format(n);
@@ -31,23 +32,7 @@ export default function Page() {
       </div>
 
       {/* Transactions list */}
-      <section className="glass overflow-hidden">
-        <div className="px-4 py-2 text-[15px] text-[var(--muted)] border-b hairline">
-          Poslední transakce
-        </div>
-        <ul className="text-sm divide-y hairline">
-          {transactions.map(t => (
-            <li key={t.id} className="px-4 py-3 flex items-center justify-between hover:bg-white/50 transition">
-              <div className="text-[color:var(--ink)]">{t.rawDescription}</div>
-              <div
-                className={t.amountCZK < 0 ? "text-[color:var(--danger)]" : "text-[color:var(--success)]"}
-              >
-                {fmt(t.amountCZK)}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <TransactionsFeed rows={transactions} mode="compact" maxRows={5} />
     </div>
   );
 }

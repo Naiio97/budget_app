@@ -18,12 +18,11 @@
 
 .safe {
   padding-inline: var(--page-gutter);
-  max-width: var(--page-max);
   margin-inline: auto; /* centrování obsahu */
 }
 
 /* Základ plátna */
-html,body{ height:100%; }
+html, body { margin: 0; }
 body{
   background: var(--bg);
   color: var(--ink);
@@ -91,3 +90,25 @@ body{
 .dropdown-panel::-webkit-scrollbar{ width:6px; }
 .dropdown-panel::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.18); border-radius:999px; }
 .dropdown-panel::-webkit-scrollbar-track{ background: transparent; }
+
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skel {
+  position: relative; overflow: hidden;
+  background: linear-gradient(90deg, rgba(0,0,0,.06) 25%, rgba(0,0,0,.12) 37%, rgba(0,0,0,.06) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+/* Chrome, Safari, Edge */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Firefox */
+.hide-scrollbar {
+  scrollbar-width: none;
+}

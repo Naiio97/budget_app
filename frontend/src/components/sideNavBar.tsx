@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const links = [
   { href: "/", label: "Dashboard" },
+  { href: "/accounts", label: "Účty" },
   { href: "/transactions", label: "Transakce" },
   { href: "/rules", label: "Pravidla" },
   { href: "/categories", label: "Kategorie" },
@@ -15,8 +16,8 @@ export default function SideNavBar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:block sticky top-0 h-dvh px-2">
-      <div className="h-full p-2 w-[184px]">
+    <aside className="hidden md:block sticky top-0 px-2">
+      <div className="p-2 w-[184px]">
         <div className="text-base font-semibold tracking-tight px-2 py-1 mb-2">💰 Budget</div>
         <nav className="space-y-1">
           {links.map((l) => {

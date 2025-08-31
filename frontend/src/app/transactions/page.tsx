@@ -3,6 +3,7 @@
 import { Listbox, Transition } from "@headlessui/react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { transactions } from "@/lib/mock-data";
+import TransactionsFeed from "@/components/TransactionsFeed"
 
 type TypeValue = "all" | "inc" | "exp";
 const typeOptions: { value: TypeValue; label: string }[] = [
@@ -139,44 +140,7 @@ export default function TransactionsPage() {
           </Listbox>
         </div>
       </div>
-
-      {/* TABULKA – schválně nižší z-index */}
-      <div className="glass overflow-hidden relative z-10">
-        <table className="w-full text-sm">
-          <thead className="text-[var(--muted)] bg-white/40">
-            <tr>
-              <th className="text-left px-4 py-2">Datum</th>
-              <th className="text-left px-4 py-2">Popis</th>
-              <th className="text-left px-4 py-2">Kategorie</th>
-              <th className="text-right px-4 py-2">Částka</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((t) => (
-              <tr key={t.id} className="border-t hairline hover:bg-white/50 transition">
-                <td className="px-4 py-2">{new Date(t.ts).toLocaleString("cs-CZ")}</td>
-                <td className="px-4 py-2">{t.rawDescription}</td>
-                <td className="px-4 py-2">{t.category}</td>
-                <td
-                  className={
-                    "px-4 py-2 text-right " +
-                    (t.amountCZK < 0 ? "text-[color:var(--danger)]" : "text-[color:var(--success)]")
-                  }
-                >
-                  {fmt(t.amountCZK)}
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-[var(--muted)]">
-                  Nic nenalezeno…
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+       <TransactionsFeed rows={filtered} height={520} />
     </div>
   );
 }
