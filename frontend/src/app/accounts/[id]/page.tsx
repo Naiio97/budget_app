@@ -1,26 +1,53 @@
+// app/accounts/[id]/page.tsx
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { accounts } from "@/lib/accounts";
-import { transactions } from "@/lib/mock-data";
 import StarPrimaryToggle from "./StarPrimaryToggle";
-import TransactionsFeed from "@/components/TransactionsFeed"
+import TransactionsFeed from "@/components/TransactionsFeed";
+import { transactions } from "@/lib/mock-data";
 
-const fmtCZK = (n:number)=>new Intl.NumberFormat("cs-CZ",{style:"currency",currency:"CZK"}).format(n);
+type Account = {
+  id: string;
+  provider: string;
+  accountName: string;
+  asOf: string; // ISO
+  // ... případně další pole (currency apod.)
+};
 
-export default async function AccountDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+const fmtCZK = (n: number) =>
+  new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK" }).format(n);
 
-  const acc = accounts.find(a => a.id === id);
-  if (!acc) return notFound();
+export default async function AccountDetail({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const { id } = params;
 
-  // ⇦ jen transakce pro daný účet
+  // Sestavíme absolutní URL podle prostředí (na serveru je to bezpečné)
+  const host = (await headers()).get("host");
+  const proto = process.env.NODE_ENV === "development" ? "http" : "https";
+  const url = `${proto}://${host}/api/accounts/${id}`;
+
+  const res = await fetch(url, { cache: "no-store" });
+
+  if (res.status === 404) {
+    notFound();
+  }
+  if (!res.ok) {
+    throw new Error(`Nepodařilo se načíst účet (${res.status}).`);
+  }
+
+  const acc: Account = await res.json();
+
+  // jen transakce pro daný účet (máme id z route – je spolehlivé)
   const txs = transactions
-    .filter(t => t.accountId === acc.id)
-    .sort((a,b) => +new Date(b.ts) - +new Date(a.ts));
+    .filter((t) => t.accountId === id)
+    .sort((a, b) => +new Date(b.ts) - +new Date(a.ts));
 
-  const incomes = txs.filter(t => t.amountCZK > 0);
-  const expenses = txs.filter(t => t.amountCZK < 0);
-  const sumIncome = incomes.reduce((a,b)=>a+b.amountCZK,0);
-  const sumExpense = expenses.reduce((a,b)=>a+Math.abs(b.amountCZK),0);
+  const incomes = txs.filter((t) => t.amountCZK > 0);
+  const expenses = txs.filter((t) => t.amountCZK < 0);
+  const sumIncome = incomes.reduce((a, b) => a + b.amountCZK, 0);
+  const sumExpense = expenses.reduce((a, b) => a + Math.abs(b.amountCZK), 0);
   const net = sumIncome - sumExpense;
 
   return (
@@ -38,14 +65,18 @@ export default async function AccountDetail({ params }: { params: Promise<{ id: 
       </div>
 
       {/* Souhrn pro tento účet */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="glass p-4">
           <div className="text-[13px] text-[var(--muted)]">Příjmy</div>
-          <div className="text-2xl font-semibold text-[color:var(--success)]">{fmtCZK(sumIncome)}</div>
+          <div className="text-2xl font-semibold text-[color:var(--success)]">
+            {fmtCZK(sumIncome)}
+          </div>
         </div>
         <div className="glass p-4">
           <div className="text-[13px] text-[var(--muted)]">Výdaje</div>
-          <div className="text-2xl font-semibold text-[color:var(--danger)]">{fmtCZK(sumExpense)}</div>
+          <div className="text-2xl font-semibold text-[color:var(--danger)]">
+            {fmtCZK(sumExpense)}
+          </div>
         </div>
         <div className="glass p-4">
           <div className="text-[13px] text-[var(--muted)]">Bilance</div>
@@ -53,7 +84,7 @@ export default async function AccountDetail({ params }: { params: Promise<{ id: 
         </div>
       </div>
 
-      <TransactionsFeed rows={txs}/>
+      <TransactionsFeed rows={txs} />
     </div>
   );
 }

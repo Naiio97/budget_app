@@ -3,10 +3,16 @@
 import Link from "next/link";
 import { useMemo, useEffect, useState } from "react";
 import { usePathname, useParams } from "next/navigation";
-import { accounts, getPrimaryId } from "@/lib/accounts";
+//import { accounts, getPrimaryId } from "@/lib/accounts";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK" }).format(n);
+
+const res = await fetch("http://localhost:3000/api/accounts", {
+  cache: "no-store",
+});
+const accounts = await res.json();
+console.log(accounts);
 
 export default function RightRail() {
   const pathname = usePathname();

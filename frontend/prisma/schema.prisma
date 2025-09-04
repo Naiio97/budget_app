@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id          String   @id // např. "rev-1"
+  provider    String
+  accountName String
+  currency    String
+  balanceCZK  Int
+  asOf        DateTime
+
+  transactions Transaction[]
+}
+
+model Category {
+  id   String @id
+  name String @unique
+
+  transactions Transaction[]
+  rules        Rule[] // ⇦ opačná strana relace pro Rule
+}
+
+model Transaction {
+  id             String   @id
+  ts             DateTime
+  amountCZK      Int
+  rawDescription String
+  merchantNorm   String
+  accountId      String
+  categoryId     String? // může být NULL
+
+  account  Account   @relation(fields: [accountId], references: [id])
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@index([accountId, ts])
+  @@index([categoryId])
+}
+
+model Rule {
+  id         String @id
+  pattern    String
+  categoryId String
+  priority   Int
+
+  category Category @relation(fields: [categoryId], references: [id])
+}
