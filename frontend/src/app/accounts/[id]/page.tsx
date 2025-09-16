@@ -1,90 +1,89 @@
 // app/accounts/[id]/page.tsx
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import StarPrimaryToggle from "./StarPrimaryToggle";
-import TransactionsFeed from "@/components/TransactionsFeed";
-import { transactions } from "@/lib/mock-data";
+import AccountDetailClient from "../../../components/AccountDetailClient";
+import { prisma } from "@/lib/prisma";
+import { TxRow } from "@/types/transactions";
 
 type Account = {
   id: string;
   provider: string;
   accountName: string;
+  customName?: string | null;
   asOf: string; // ISO
+  connectionId?: string | null;
+  balanceCZK: number;
   // ... případně další pole (currency apod.)
 };
 
-const fmtCZK = (n: number) =>
-  new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK" }).format(n);
+export default async function AccountDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
-export default async function AccountDetail({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const { id } = params;
+  const account = await (prisma as any).account.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      provider: true,
+      accountName: true,
+      customName: true,
+      asOf: true,
+      connectionId: true,
+      isVisible: true,
+      balanceCZK: true,
+    },
+  });
 
-  // Sestavíme absolutní URL podle prostředí (na serveru je to bezpečné)
-  const host = (await headers()).get("host");
-  const proto = process.env.NODE_ENV === "development" ? "http" : "https";
-  const url = `${proto}://${host}/api/accounts/${id}`;
-
-  const res = await fetch(url, { cache: "no-store" });
-
-  if (res.status === 404) {
+  if (!account || account.isVisible === false) {
     notFound();
   }
-  if (!res.ok) {
-    throw new Error(`Nepodařilo se načíst účet (${res.status}).`);
-  }
 
-  const acc: Account = await res.json();
+  const categories = await (prisma as any).category.findMany({ orderBy: { name: "asc" } });
 
-  // jen transakce pro daný účet (máme id z route – je spolehlivé)
-  const txs = transactions
-    .filter((t) => t.accountId === id)
-    .sort((a, b) => +new Date(b.ts) - +new Date(a.ts));
+  const accounts = await (prisma as any).account.findMany({
+    where: { isVisible: { not: false } },
+    select: { id: true, accountName: true, provider: true, customName: true },
+    orderBy: [{ provider: "asc" }, { accountName: "asc" }],
+  });
 
-  const incomes = txs.filter((t) => t.amountCZK > 0);
-  const expenses = txs.filter((t) => t.amountCZK < 0);
-  const sumIncome = incomes.reduce((a, b) => a + b.amountCZK, 0);
-  const sumExpense = expenses.reduce((a, b) => a + Math.abs(b.amountCZK), 0);
-  const net = sumIncome - sumExpense;
+  const txs = await (prisma as any).transaction.findMany({
+    where: { accountId: id },
+    include: { category: true },
+    orderBy: { ts: "desc" },
+  });
+
+  const rows: TxRow[] = (txs as Array<any>).map((t: any) => ({
+    id: t.id,
+    ts: t.ts.toISOString(),
+    rawDescription: t.rawDescription,
+    category: t.category?.name ?? "",
+    categoryId: t.categoryId ?? null,
+    amountCZK: t.amountCZK,
+  }));
+
+  const accForClient: Account = {
+    id: account.id,
+    provider: account.provider,
+    accountName: account.accountName,
+    customName: account.customName,
+    asOf: (account.asOf as Date).toISOString(),
+    connectionId: account.connectionId,
+    balanceCZK: account.balanceCZK,
+  };
+
+  const categoriesForClient = (categories as Array<any>).map((c: any) => ({ id: c.id, name: c.name }));
+
+  const accountsForClient = (accounts as Array<any>).map((a: any) => ({
+    id: a.id,
+    accountName: a.accountName,
+    provider: a.provider,
+    customName: a.customName,
+  }));
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold tracking-tight">
-            {acc.provider} – {acc.accountName}
-          </h1>
-          <StarPrimaryToggle id={acc.id} />
-        </div>
-        <div className="text-[13px] text-[var(--muted)]">
-          Stav k {new Date(acc.asOf).toLocaleString("cs-CZ")}
-        </div>
-      </div>
-
-      {/* Souhrn pro tento účet */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="glass p-4">
-          <div className="text-[13px] text-[var(--muted)]">Příjmy</div>
-          <div className="text-2xl font-semibold text-[color:var(--success)]">
-            {fmtCZK(sumIncome)}
-          </div>
-        </div>
-        <div className="glass p-4">
-          <div className="text-[13px] text-[var(--muted)]">Výdaje</div>
-          <div className="text-2xl font-semibold text-[color:var(--danger)]">
-            {fmtCZK(sumExpense)}
-          </div>
-        </div>
-        <div className="glass p-4">
-          <div className="text-[13px] text-[var(--muted)]">Bilance</div>
-          <div className="text-2xl font-semibold">{fmtCZK(net)}</div>
-        </div>
-      </div>
-
-      <TransactionsFeed rows={txs} />
-    </div>
+    <AccountDetailClient
+      account={accForClient}
+      transactions={rows}
+      categories={categoriesForClient}
+      accounts={accountsForClient}
+    />
   );
 }

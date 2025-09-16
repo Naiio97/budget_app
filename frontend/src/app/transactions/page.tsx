@@ -1,146 +1,38 @@
-"use client";
+import { prisma } from "@/lib/prisma";
+import TransactionsClient from "../../components/TransactionsClient";
 
-import { Listbox, Transition } from "@headlessui/react";
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { transactions } from "@/lib/mock-data";
-import TransactionsFeed from "@/components/TransactionsFeed"
+export default async function TransactionsPage() {
+  const accounts = await (prisma as any).account.findMany({
+    where: { isVisible: { not: false } },
+    orderBy: [{ provider: "asc" }, { accountName: "asc" }],
+  });
+  const categories = await (prisma as any).category.findMany({ orderBy: { name: "asc" } });
+  const txs = await (prisma as any).transaction.findMany({
+    where: { account: { isVisible: { not: false } } },
+    include: { account: true, category: true },
+    orderBy: { ts: "desc" },
+  });
 
-type TypeValue = "all" | "inc" | "exp";
-const typeOptions: { value: TypeValue; label: string }[] = [
-  { value: "all", label: "Vše" },
-  { value: "inc", label: "Příjmy" },
-  { value: "exp", label: "Výdaje" },
-];
+  const rows = (txs as Array<any>).map((t: any) => ({
+    id: t.id,
+    ts: t.ts.toISOString(),
+    rawDescription: t.rawDescription,
+    category: t.category?.name ?? "",
+    categoryId: t.categoryId ?? null,
+    amountCZK: t.amountCZK,
+    accountName: t.account.id,
+    accountProvider: t.account.provider,
+    accountDisplayName: t.account.customName || t.account.accountName,
+  }));
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK" }).format(n);
+  const accountsForClient = (accounts as Array<any>).map((a: any) => ({
+    id: a.id,
+    accountName: a.accountName,
+    provider: a.provider,
+    customName: a.customName,
+  }));
 
-export default function TransactionsPage() {
-  const [q, setQ] = useState("");
+  const categoriesForClient = (categories as Array<any>).map((c: any) => ({ id: c.id, name: c.name }));
 
-  // filtry používané logikou
-  const [type, setType] = useState<TypeValue>("all");
-  const [cat, setCat] = useState<string>("all");
-
-  // HeadlessUI stavy (objekty kvůli labelům)
-  const [selectedType, setSelectedType] = useState(typeOptions[0]);
-
-  const categories = useMemo(() => {
-    const set = new Set(transactions.map((t) => t.category));
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "cs"));
-  }, []);
-  const categoryOptions = useMemo(
-    () => [{ value: "all", label: "Všechny kategorie" }, ...categories.map((c) => ({ value: c, label: c }))],
-    [categories]
-  );
-  const [selectedCat, setSelectedCat] = useState(categoryOptions[0]);
-
-  useEffect(() => setType(selectedType.value), [selectedType]);
-  useEffect(() => setCat(selectedCat.value), [selectedCat]);
-
-  const filtered = useMemo(() => {
-    return transactions.filter((t) => {
-      if (type === "inc" && t.amountCZK <= 0) return false;
-      if (type === "exp" && t.amountCZK >= 0) return false;
-      if (cat !== "all" && t.category !== cat) return false;
-      if (q && !(`${t.rawDescription} ${t.merchantNorm}`.toLowerCase().includes(q.toLowerCase()))) return false;
-      return true;
-    });
-  }, [q, type, cat]);
-
-  return (
-    <div className="space-y-4">
-      {/* FILTRY – vždy nad tabulkou */}
-      <div className="glass p-3 flex flex-wrap items-center gap-2 relative z-50">
-        <input
-          placeholder="Hledat…"
-          className="bg-transparent outline-none text-sm placeholder-[var(--muted)] flex-1 min-w-[220px]"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-
-        {/* Typ transakce */}
-        <div className="relative w-40 z-50">
-          <Listbox value={selectedType} onChange={setSelectedType}>
-            <Listbox.Button className="glass w-full px-3 py-2 rounded-xl text-sm text-left focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
-              {selectedType.label}
-            </Listbox.Button>
-
-            <Transition
-              as={Fragment}
-              enter="transition ease-out duration-150"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="transition ease-in duration-100"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Listbox.Options className="absolute mt-1 dropdown-panel w-full shadow-xl z-50 overflow-hidden">
-                {typeOptions.map((o) => (
-                  <Listbox.Option
-                    key={o.value}
-                    value={o}
-                    className={({ active, selected }) =>
-                      `px-3 py-2 cursor-pointer select-none flex items-center justify-between
-                       ${active ? "bg-black/5" : ""} ${selected ? "font-semibold" : ""}`
-                    }
-                  >
-                    {({ selected }) => (
-                      <>
-                        {o.label}
-                        {selected && <span className="text-[var(--accent)] text-xs">●</span>}
-                      </>
-                    )}
-                  </Listbox.Option>
-                ))}
-              </Listbox.Options>
-            </Transition>
-          </Listbox>
-        </div>
-
-        {/* Kategorie */}
-        <div className="relative w-56 z-50">
-          <Listbox value={selectedCat} onChange={setSelectedCat}>
-            <Listbox.Button className="glass w-full px-3 py-2 rounded-xl text-sm text-left focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
-              {selectedCat.label}
-            </Listbox.Button>
-
-            <Transition
-              as={Fragment}
-              enter="transition ease-out duration-150"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="transition ease-in duration-100"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Listbox.Options className="absolute mt-1 dropdown-panel w-full max-h-64 overflow-auto shadow-xl z-50">
-                <div className="px-3 py-2 text-[12px] text-[var(--muted)] bg-white/70 sticky top-0">
-                  Kategorie
-                </div>
-                {categoryOptions.map((o) => (
-                  <Listbox.Option
-                    key={o.value}
-                    value={o}
-                    className={({ active, selected }) =>
-                      `px-3 py-2 cursor-pointer select-none flex items-center justify-between
-                       ${active ? "bg-black/5" : ""} ${selected ? "font-semibold" : ""}`
-                    }
-                  >
-                    {({ selected }) => (
-                      <>
-                        {o.label}
-                        {selected && <span className="text-[var(--accent)] text-xs">●</span>}
-                      </>
-                    )}
-                  </Listbox.Option>
-                ))}
-              </Listbox.Options>
-            </Transition>
-          </Listbox>
-        </div>
-      </div>
-       <TransactionsFeed rows={filtered} height={520} />
-    </div>
-  );
+  return <TransactionsClient initialTransactions={rows} initialAccounts={accountsForClient} initialCategories={categoriesForClient} />;
 }

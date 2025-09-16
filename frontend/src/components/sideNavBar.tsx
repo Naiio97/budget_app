@@ -7,6 +7,8 @@ const links = [
   { href: "/", label: "Dashboard" },
   { href: "/accounts", label: "Účty" },
   { href: "/transactions", label: "Transakce" },
+  { href: "/budget", label: "Rozpočet" },
+  { href: "/investments", label: "Investice" },
   { href: "/rules", label: "Pravidla" },
   { href: "/categories", label: "Kategorie" },
   { href: "/settings", label: "Nastavení" },
@@ -16,7 +18,7 @@ export default function SideNavBar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:block sticky top-0 px-2">
+    <aside className="hidden md:block px-2">
       <div className="p-2 w-[184px]">
         <div className="text-base font-semibold tracking-tight px-2 py-1 mb-2">💰 Budget</div>
         <nav className="space-y-1">

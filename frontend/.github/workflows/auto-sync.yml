@@ -1,0 +1,19 @@
+name: Auto Sync
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 03:00 UTC
+    - cron: '0 15 * * *'  # 15:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  call-sync-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call sync endpoint
+        run: |
+          curl -sSf "${SYNC_URL}" || exit 1
+        env:
+          SYNC_URL: ${{ secrets.SYNC_URL }}
+
+

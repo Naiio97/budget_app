@@ -1,49 +1,58 @@
-import { transactions } from "@/lib/mock-data";
-import TransactionsFeed from "@/components/TransactionsFeed"
+﻿import { prisma } from "@/lib/prisma";
+import DashboardClient from "../components/DashboardClient";
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK" }).format(n);
+export default async function Page() {
+  // Načti účty (jen viditelné)
+  const accounts = await (prisma as any).account.findMany({
+    where: { isVisible: { not: false } },
+    include: {
+      institution: { select: { logo: true } },
+    },
+    orderBy: [{ provider: "asc" }, { accountName: "asc" }],
+  });
 
-export default function Page() {
-  const incomes = transactions.filter(t => t.amountCZK > 0);
-  const expenses = transactions.filter(t => t.amountCZK < 0);
-  const sumIncome = incomes.reduce((a, b) => a + b.amountCZK, 0);
-  const sumExpense = expenses.reduce((a, b) => a + Math.abs(b.amountCZK), 0);
-  const net = sumIncome - sumExpense;
+  // Načti kategorie
+  const categories = await (prisma as any).category.findMany({
+    orderBy: { name: "asc" },
+  });
+
+  // Načti transakce pro všechny viditelné účty
+  const transactions = await (prisma as any).transaction.findMany({
+    where: { account: { isVisible: { not: false } } },
+    include: { account: true, category: true },
+    orderBy: { ts: "desc" },
+  });
+
+  // Namapuj na TxRow
+  const rows = (transactions as Array<any>).map((t: any) => ({
+    id: t.id,
+    ts: t.ts.toISOString(),
+    rawDescription: t.rawDescription,
+    category: t.category?.name ?? "",
+    categoryId: t.categoryId ?? null,
+    amountCZK: t.amountCZK,
+    accountName: t.account.accountName,
+    accountProvider: t.account.provider,
+    accountDisplayName: t.account.customName || t.account.accountName,
+  }));
+
+  const accountsForClient = (accounts as Array<any>).map((a: any) => ({
+    id: a.id,
+    accountName: a.accountName,
+    provider: a.provider,
+    balanceCZK: a.balanceCZK,
+    customName: a.customName,
+    isVisible: a.isVisible,
+    institutionLogo: a.institution?.logo || null,
+  }));
+
+  const categoriesForClient = (categories as Array<any>).map((c: any) => ({ id: c.id, name: c.name }));
 
   return (
-    <div className="space-y-4">
-      {/* Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-        <Card title="Příjmy"  value={fmt(sumIncome)}  color="var(--success)" />
-        <Card title="Výdaje"  value={fmt(sumExpense)} color="var(--danger)" />
-        <Card title="Bilance" value={fmt(net)} />
-      </div>
-
-      {/* Insight chip */}
-      <div className="inline-flex items-center gap-2 glass px-3 py-2 text-[13px] in-pop">
-        <span
-          className="w-1.5 h-1.5 rounded-full"
-          style={{ background: "linear-gradient(135deg,#007aff,#5ac8fa)" }}
-        />
-        <span className="text-[var(--muted)]">
-          Tento měsíc +12 % za „Jídlo venku“ oproti průměru 3 měsíců.
-        </span>
-      </div>
-
-      {/* Transactions list */}
-      <TransactionsFeed rows={transactions} mode="compact" maxRows={5} />
-    </div>
-  );
-}
-
-function Card({ title, value, color }: { title: string; value: string; color?: string }) {
-  return (
-    <div className="glass p-5 transition-transform duration-200 hover:scale-[1.01] in-pop">
-      <div className="text-[13px] text-[var(--muted)] mb-1">{title}</div>
-      <div className="text-3xl font-semibold tracking-tight" style={color ? { color } : undefined}>
-        {value}
-      </div>
-    </div>
+    <DashboardClient
+      accounts={accountsForClient}
+      transactions={rows}
+      categories={categoriesForClient}
+    />
   );
 }

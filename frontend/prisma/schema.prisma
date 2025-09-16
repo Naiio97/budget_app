@@ -8,22 +8,69 @@ datasource db {
 }
 
 model Account {
-  id          String   @id // např. "rev-1"
-  provider    String
-  accountName String
-  currency    String
-  balanceCZK  Int
-  asOf        DateTime
+  id            String   @id // např. "rev-1"
+  provider      String
+  accountName   String
+  currency      String
+  balanceCZK    Int
+  asOf          DateTime
+  externalId    String? // ID účtu u poskytovatele (GoCardless)
+  iban          String? // pokud je k dispozici
+  institutionId String? // vazba na instituci (banka)
+  connectionId  String? // vazba na uživatelovo napojení
+  isVisible     Boolean  @default(true) // zda je účet zobrazen v aplikaci
+  customName    String? // vlastní název účtu (přejmenování)
 
-  transactions Transaction[]
+  transactions     Transaction[]
+  envelopes        Envelope[]
+  institution      Institution?       @relation(fields: [institutionId], references: [id])
+  connection       Connection?        @relation(fields: [connectionId], references: [id])
+  EnvelopeTransfer EnvelopeTransfer[]
+}
+
+model Institution {
+  id      String  @id // provider institution id z GoCardless (např. "SANDBOXFINANCE_SFINCZPP")
+  name    String
+  country String? // může být null pro některé instituce
+  logo    String?
+  website String?
+
+  accounts    Account[]
+  connections Connection[]
+}
+
+model Connection {
+  id               String    @id // requisition id z GoCardless
+  institutionId    String
+  createdAt        DateTime  @default(now())
+  status           String // e.g. "LINKED", "SUSPENDED"...
+  accessValidUntil DateTime?
+
+  institution Institution @relation(fields: [institutionId], references: [id])
+  accounts    Account[]
+  syncJobs    SyncJob[]
 }
 
 model Category {
   id   String @id
   name String @unique
+  groupId String?
 
   transactions Transaction[]
   rules        Rule[] // ⇦ opačná strana relace pro Rule
+  group        CategoryGroup? @relation(fields: [groupId], references: [id])
+
+  @@index([groupId])
+}
+
+model CategoryGroup {
+  id        String   @id
+  name      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categories Category[]
 }
 
 model Transaction {
@@ -34,12 +81,49 @@ model Transaction {
   merchantNorm   String
   accountId      String
   categoryId     String? // může být NULL
+  externalId     String? // ID transakce u poskytovatele
+  currency       String? // originální měna
+  amountOriginal Int? // částka v originální měně
+  balanceAfter   Int?
 
   account  Account   @relation(fields: [accountId], references: [id])
   category Category? @relation(fields: [categoryId], references: [id])
 
   @@index([accountId, ts])
   @@index([categoryId])
+}
+
+model Envelope {
+  id        String   @id
+  accountId String
+  name      String
+  amountCZK Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  // Relations for transfer history
+  transfersFrom EnvelopeTransfer[] @relation("FromEnvelope")
+  transfersTo   EnvelopeTransfer[] @relation("ToEnvelope")
+
+  @@index([accountId])
+}
+
+model EnvelopeTransfer {
+  id             String   @id
+  accountId      String
+  fromEnvelopeId String?
+  toEnvelopeId   String?
+  amountCZK      Int
+  note           String?
+  ts             DateTime @default(now())
+
+  account      Account   @relation(fields: [accountId], references: [id])
+  fromEnvelope Envelope? @relation("FromEnvelope", fields: [fromEnvelopeId], references: [id])
+  toEnvelope   Envelope? @relation("ToEnvelope", fields: [toEnvelopeId], references: [id])
+
+  @@index([accountId, ts])
 }
 
 model Rule {
@@ -49,4 +133,51 @@ model Rule {
   priority   Int
 
   category Category @relation(fields: [categoryId], references: [id])
+}
+
+model SyncJob {
+  id           String    @id
+  connectionId String
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  status       String // "RUNNING" | "SUCCESS" | "ERROR"
+  message      String?
+
+  connection Connection @relation(fields: [connectionId], references: [id])
+}
+
+// Trading 212 persistence
+model T212Position {
+  id        String   @id // ticker nebo ticker+account
+  ticker    String
+  quantity  Float
+  avgPrice  Float
+  curPrice  Float
+  ppl       Float
+  currency  String
+  updatedAt DateTime @updatedAt
+}
+
+model T212Cash {
+  id        String   @id // single row "t212-cash"
+  amount    Float
+  currency  String
+  updatedAt DateTime @updatedAt
+}
+
+model T212Snapshot {
+  id        String   @id // yyyymmdd
+  total     Float
+  currency  String
+  createdAt DateTime @default(now())
+}
+
+// FX rates (ČNB)
+model FxRate {
+  id       String @id // yyyymmdd-<ISO>
+  date     String // yyyymmdd
+  currency String // ISO code, e.g. EUR
+  amount   Int    // jednotek měny podle ČNB sloupce (např. 1, 100)
+  rate     Float  // CZK za amount měny
+  createdAt DateTime @default(now())
 }

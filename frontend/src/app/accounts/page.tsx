@@ -1,24 +1,19 @@
-"use client";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getPrimaryId, getFallbackAccountId } from "@/lib/accounts";
+export default async function AccountsRedirectPage() {
+  const accounts = await (prisma as any).account.findMany({
+    where: { isVisible: { not: false } },
+    select: { id: true, connectionId: true },
+    orderBy: [{ provider: "asc" }, { accountName: "asc" }],
+  });
 
-export default function AccountsRedirectPage() {
-  const router = useRouter();
-  const [ready, setReady] = useState(false);
+  if (!accounts || accounts.length === 0) {
+    // žádný účet → přesměrujeme na /settings (nebo home)
+    redirect("/");
+  }
 
-  useEffect(() => {
-    const primary = getPrimaryId();
-    const targetId = primary || getFallbackAccountId();
-    if (targetId) router.replace(`/accounts/${targetId}`);
-    setReady(true);
-  }, [router]);
-
-  // drobný loader, ať to necuká
-  return (
-    <div className="glass p-4">
-      {ready ? "Načítám účet…" : null}
-    </div>
-  );
+  const synced = accounts.find((a: any) => !!a.connectionId);
+  const target = synced?.id || accounts[0].id;
+  redirect(`/accounts/${target}`);
 }

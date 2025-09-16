@@ -1,0 +1,69 @@
+export type Institution = {
+  id: string;
+  name: string;
+  country: string;
+  logo?: string;
+  website?: string;
+};
+
+export type ExternalAccount = {
+  id: string;
+  name: string;
+  iban?: string;
+  currency?: string;
+};
+
+export type ExternalTransaction = {
+  id: string;
+  ts: string;
+  amount: number;
+  currency?: string;
+  description?: string;
+  balanceAfter?: number;
+};
+
+export interface BankAdapter {
+  getInstitutions(): Promise<Institution[]>;
+  startConnection(institutionId: string, redirectUrl: string): Promise<{ redirect: string; requisitionId: string }>;
+  finalizeConnection(requisitionId: string): Promise<{ status: string }>;
+  listAccounts(requisitionId: string): Promise<ExternalAccount[]>;
+  fetchTransactions(accountId: string, since?: string): Promise<ExternalTransaction[]>;
+}
+
+export class GoCardlessAdapter implements BankAdapter {
+  private secretId: string;
+  private secretKey: string;
+  private baseUrl: string;
+
+  constructor(opts?: { secretId?: string; secretKey?: string; sandbox?: boolean }) {
+    this.secretId = opts?.secretId || process.env.GC_SECRET_ID || "";
+    this.secretKey = opts?.secretKey || process.env.GC_SECRET_KEY || "";
+    this.baseUrl = (opts?.sandbox ?? true) ? "https://ob.nordigen.com/api/v2" : "https://ob.nordigen.com/api/v2";
+  }
+
+  async getInstitutions(): Promise<Institution[]> {
+    // TODO: call /institutions/?country=cz
+    return [];
+  }
+
+  async startConnection(institutionId: string, redirectUrl: string): Promise<{ redirect: string; requisitionId: string }>
+  {
+    // TODO: create requisition and link
+    return { redirect: redirectUrl, requisitionId: "requisition-stub" };
+  }
+
+  async finalizeConnection(requisitionId: string): Promise<{ status: string }> {
+    // TODO: verify requisition status
+    return { status: "LINKED" };
+  }
+
+  async listAccounts(_requisitionId: string): Promise<ExternalAccount[]> {
+    // TODO: fetch accounts bound to requisition
+    return [];
+  }
+
+  async fetchTransactions(_accountId: string, _since?: string): Promise<ExternalTransaction[]> {
+    // TODO: fetch transactions
+    return [];
+  }
+} 

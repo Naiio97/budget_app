@@ -1,0 +1,23 @@
+name: Nightly Sync
+
+on:
+  schedule:
+    - cron: '5 0 * * *' # každý den 00:05 UTC
+  workflow_dispatch: {}
+
+jobs:
+  call-nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call app nightly endpoint
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -e
+          if [ -z "$SITE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Missing SITE_URL or CRON_SECRET secrets" >&2
+            exit 1
+          fi
+          curl -fsS -H "x-cron-secret: $CRON_SECRET" "$SITE_URL/api/cron/nightly"
+
