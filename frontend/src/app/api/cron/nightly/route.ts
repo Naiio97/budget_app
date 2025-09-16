@@ -9,11 +9,14 @@ export async function GET(req: NextRequest) {
   const qsToken = new URL(req.url).searchParams.get('token');
   if (header !== token && qsToken !== token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
+    const base = new URL(req.url).origin;
     // 1) Kurzy ČNB
-    await fetch(new URL('/api/fx/cnb/sync', req.url).toString(), { method: 'POST' });
+    const fxRes = await fetch(`${base}/api/fx/cnb/sync`, { method: 'POST' });
     // 2) Trading 212
     const { total } = await runT212Sync(apiKey);
-    return NextResponse.json({ ok: true, total });
+    // 3) GoCardless (všechny requisitions)
+    const gcRes = await fetch(`${base}/api/sync/gc?cron=true`, { method: 'GET', headers: { 'x-cron-secret': token } }).catch(()=>null);
+    return NextResponse.json({ ok: true, t212Total: total, fxOk: fxRes.ok, gcOk: gcRes?.ok ?? false });
   } catch (e:any) {
     return NextResponse.json({ error: e?.message || 'Cron error' }, { status: 500 });
   }

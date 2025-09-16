@@ -23,6 +23,32 @@ export default async function Page() {
     orderBy: { ts: "desc" },
   });
 
+  // Trading 212 total (positions + cash) converted do CZK podle posledních kurzů
+  let tradingTotalCZK = 0;
+  try {
+    const [positions, cash, latestFx] = await Promise.all([
+      (prisma as any).t212Position.findMany().catch(() => []),
+      (prisma as any).t212Cash.findUnique({ where: { id: "t212-cash" } }).catch(() => null),
+      (prisma as any).fxRate.findFirst({ orderBy: { date: "desc" } }).catch(() => null),
+    ]);
+    let fxMap: Record<string, { amount: number; rate: number }> = {};
+    if (latestFx?.date) {
+      const fxList = await (prisma as any).fxRate.findMany({ where: { date: latestFx.date } }).catch(() => []);
+      fxMap = Object.fromEntries((fxList as Array<any>).map(r => [r.currency, { amount: r.amount, rate: r.rate }]));
+      fxMap["CZK"] = { amount: 1, rate: 1 };
+    }
+    const convert = (value: number, currency: string) => {
+      const r = fxMap[currency];
+      if (!r) return 0;
+      return (value / r.amount) * r.rate;
+    };
+    const posCZK = (positions as Array<any>).reduce((s, p) => s + convert((p.curPrice || 0) * (p.quantity || 0), String(p.currency || "EUR")), 0);
+    const cashCZK = cash ? convert(Number(cash.amount || 0), String(cash.currency || "EUR")) : 0;
+    tradingTotalCZK = Math.round(posCZK + cashCZK);
+  } catch {
+    tradingTotalCZK = 0;
+  }
+
   // Namapuj na TxRow
   const rows = (transactions as Array<any>).map((t: any) => ({
     id: t.id,
@@ -53,6 +79,7 @@ export default async function Page() {
       accounts={accountsForClient}
       transactions={rows}
       categories={categoriesForClient}
+      tradingTotalCZK={tradingTotalCZK}
     />
   );
 }

@@ -10,12 +10,14 @@ export default function CategoryManagement({ initialCategories = [] as Category[
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [catModalOpen, setCatModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editName, setEditName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
   const [newGroupName, setNewGroupName] = useState("");
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<CategoryGroup | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
   const [groupSubmitting, setGroupSubmitting] = useState(false);
@@ -211,18 +213,10 @@ export default function CategoryManagement({ initialCategories = [] as Category[
     <div className="space-y-6">
       {/* Správa skupin */}
       <div className="glass p-4">
-        <h3 className="text-lg font-semibold mb-3">Skupiny rozpočtu</h3>
-        <form onSubmit={handleAddGroup} className="flex gap-2 mb-3">
-          <input
-            type="text"
-            value={newGroupName}
-            onChange={(e)=> setNewGroupName(e.target.value)}
-            placeholder="Název nové skupiny…"
-            className="glass flex-1 px-3 py-2 rounded-xl text-sm placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] border border-white/20"
-            disabled={groupSubmitting}
-          />
-          <button type="submit" disabled={!newGroupName.trim()||groupSubmitting} className="px-4 py-2 bg-[var(--accent)] text-white rounded-xl text-sm disabled:opacity-50">Přidat</button>
-        </form>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold">Skupiny rozpočtu</h3>
+          <button className="px-2 py-1 text-xs glass rounded hover:bg-black/5" onClick={()=> setGroupModalOpen(true)}>+ Přidat skupinu</button>
+        </div>
         <div className="flex flex-wrap gap-2">
           {groups.map(g => (
             <div key={g.id} className="px-2 py-1 bg-black/10 rounded flex items-center gap-2">
@@ -245,34 +239,15 @@ export default function CategoryManagement({ initialCategories = [] as Category[
         </div>
       </div>
 
-      {/* Přidat novou kategorii */}
-      <div className="glass p-4">
-        <h3 className="text-lg font-semibold mb-4">Přidat novou kategorii</h3>
-        <form onSubmit={handleAddCategory} className="flex gap-2">
-          <input
-            type="text"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            placeholder="Název kategorie..."
-            className="glass flex-1 px-3 py-2 rounded-xl text-sm placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] border border-white/20"
-            disabled={isSubmitting}
-          />
-          <button
-            type="submit"
-            disabled={!newCategoryName.trim() || isSubmitting}
-            className="px-4 py-2 bg-[var(--accent)] text-white rounded-xl text-sm hover:bg-[var(--accent)]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? 'Přidávám...' : 'Přidat'}
-          </button>
-        </form>
-        {actionError && (
-          <div className="mt-2 text-sm text-red-600">{actionError}</div>
-        )}
-      </div>
+      {/* Přidat novou kategorii (sekci jsme skryli; tlačítko přesunuto níže) */}
+      <div className="hidden" />
 
       {/* Seznam kategorií */}
       <div className="glass p-4">
-        <h3 className="text-lg font-semibold mb-4">Existující kategorie ({categories.length})</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Existující kategorie ({categories.length})</h3>
+          <button className="px-2 py-1 text-xs glass rounded hover:bg-black/5" onClick={()=> setCatModalOpen(true)}>+ Přidat kategorii</button>
+        </div>
         {categories.length === 0 ? (
           <div className="text-sm text-[var(--muted)]">Žádné kategorie nenalezeny</div>
         ) : (
@@ -357,6 +332,40 @@ export default function CategoryManagement({ initialCategories = [] as Category[
           </div>
         )}
       </div>
+      {groupModalOpen && (
+        <div className="fixed inset-0 z-[1000]">
+          <div className="absolute inset-0 bg-black/50" onClick={()=> setGroupModalOpen(false)} />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-[520px]">
+            <div className="bg-white p-5 rounded-2xl shadow-2xl border border-black/10">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-medium">Nová skupina</div>
+                <button className="text-[13px] text-[var(--muted)] hover:text-black" onClick={()=> setGroupModalOpen(false)}>Zavřít</button>
+              </div>
+              <form onSubmit={handleAddGroup} className="flex gap-2">
+                <input type="text" value={newGroupName} onChange={(e)=> setNewGroupName(e.target.value)} placeholder="Název nové skupiny…" className="glass flex-1 px-3 py-2 rounded-xl text-sm border border-black/10" disabled={groupSubmitting} />
+                <button type="submit" disabled={!newGroupName.trim()||groupSubmitting} className="px-3 py-1.5 rounded text-sm bg-[var(--accent)] text-white disabled:opacity-50">Přidat</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+      {catModalOpen && (
+        <div className="fixed inset-0 z-[1000]">
+          <div className="absolute inset-0 bg-black/50" onClick={()=> setCatModalOpen(false)} />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-[520px]">
+            <div className="bg-white p-5 rounded-2xl shadow-2xl border border-black/10">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-medium">Nová kategorie</div>
+                <button className="text-[13px] text-[var(--muted)] hover:text-black" onClick={()=> setCatModalOpen(false)}>Zavřít</button>
+              </div>
+              <form onSubmit={handleAddCategory} className="flex gap-2">
+                <input type="text" value={newCategoryName} onChange={(e)=> setNewCategoryName(e.target.value)} placeholder="Název kategorie…" className="glass flex-1 px-3 py-2 rounded-xl text-sm border border-black/10" disabled={isSubmitting} />
+                <button type="submit" disabled={!newCategoryName.trim()||isSubmitting} className="px-3 py-1.5 rounded text-sm bg-[var(--accent)] text-white disabled:opacity-50">Přidat</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

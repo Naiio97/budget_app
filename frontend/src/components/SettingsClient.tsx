@@ -81,16 +81,6 @@ export default function SettingsClient({
           Napojení banky
         </button>
         <button
-          onClick={() => setActiveTab("categories")}
-          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-            activeTab === "categories"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          Kategorie
-        </button>
-        <button
           onClick={() => setActiveTab("automation")}
           className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
             activeTab === "automation"
@@ -98,54 +88,31 @@ export default function SettingsClient({
               : "text-gray-600 hover:text-gray-900"
           }`}
         >
-          Automatizace
+          Synchronizace
         </button>
       </div>
 
       {/* Content */}
       <div className="space-y-6">
-        <div className="glass p-4">
-          <div className="text-lg font-semibold mb-2">Synchronizace</div>
-          <div className="text-[13px] text-[var(--muted)] mb-3">Spustit manuálně synchronizaci všech napojení</div>
-          {last && (
-            <div className="text-[12px] text-[var(--muted)] mb-2">
-              Poslední: T212 {last.t212 || '—'} · ČNB {last.fx || '—'}
-            </div>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="px-2 py-1 text-xs glass rounded hover:bg-black/5"
-              onClick={async ()=>{ setLoading(true); await fetch('/api/fx/cnb/sync', { method: 'POST' }); setLoading(false); router.refresh(); }}
-            >Sync ČNB kurzy</button>
-            <button
-              className="px-2 py-1 text-xs glass rounded hover:bg-black/5"
-              onClick={async ()=>{ setLoading(true); await fetch('/api/integrations/t212/sync', { method: 'POST' }); setLoading(false); router.refresh(); }}
-            >Sync Trading 212</button>
-            <button
-              className="px-2 py-1 text-xs glass rounded hover:bg-black/5"
-              onClick={async ()=>{ setLoading(true); await fetch('/api/sync/gc', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ syncAll: true }) }); setLoading(false); router.refresh(); }}
-            >Sync GoCardless</button>
-            <button
-              className="px-2 py-1 text-xs bg-[var(--accent)] text-white rounded hover:opacity-90"
-              onClick={async ()=>{
-                setLoading(true);
-                await Promise.all([
-                  fetch('/api/fx/cnb/sync', { method: 'POST' }),
-                  fetch('/api/integrations/t212/sync', { method: 'POST' }),
-                  fetch('/api/sync/gc', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ syncAll: true }) }),
-                ]);
-                setLoading(false); router.refresh();
-              }}
-            >Sync vše</button>
-            {loading && <span className="text-[12px] text-[var(--muted)]">Probíhá synchronizace…</span>}
-          </div>
-        </div>
         {activeTab === "accounts" && <AccountManagement initialAccounts={initialAccounts} />}
         {activeTab === "bank" && <ConnectBank />}
-        {activeTab === "categories" && <CategoryManagement initialCategories={initialCategories} />}
         {activeTab === "automation" && (
+          <>
           <div className="glass p-4 space-y-3 max-w-xl">
-            <div className="text-sm text-[var(--muted)]">Automatická synchronizace</div>
+            <div className="text-lg font-semibold">Spustit manuálně synchronizaci všech napojení</div>
+            {last && (
+              <div className="text-[12px] text-[var(--muted)]">Poslední: T212 {last.t212 || '—'} · ČNB {last.fx || '—'}</div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <button className="px-2 py-1 text-xs glass rounded hover:bg-black/5" onClick={async ()=>{ setLoading(true); await fetch('/api/fx/cnb/sync', { method: 'POST' }); setLoading(false); router.refresh(); }}>Sync ČNB kurzy</button>
+              <button className="px-2 py-1 text-xs glass rounded hover:bg-black/5" onClick={async ()=>{ setLoading(true); await fetch('/api/integrations/t212/sync', { method: 'POST' }); setLoading(false); router.refresh(); }}>Sync Trading 212</button>
+              <button className="px-2 py-1 text-xs glass rounded hover:bg-black/5" onClick={async ()=>{ setLoading(true); await fetch('/api/sync/gc', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ syncAll: true }) }); setLoading(false); router.refresh(); }}>Sync GoCardless</button>
+              <button className="px-2 py-1 text-xs bg-[var(--accent)] text-white rounded hover:opacity-90" onClick={async ()=>{ setLoading(true); await Promise.all([ fetch('/api/fx/cnb/sync', { method: 'POST' }), fetch('/api/integrations/t212/sync', { method: 'POST' }), fetch('/api/sync/gc', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ syncAll: true }) }), ]); setLoading(false); router.refresh(); }}>Sync vše</button>
+              {loading && <span className="text-[12px] text-[var(--muted)]">Probíhá synchronizace…</span>}
+            </div>
+          </div>
+          <div className="glass p-4 space-y-3 max-w-xl">
+            <div className="text-lg font-semibold">Automatická synchronizace</div>
             <div className="flex flex-col gap-2">
               {[0,1].map(i=> {
                 const local = times[i];
@@ -186,6 +153,7 @@ export default function SettingsClient({
               <code className="mx-1">GET /api/sync/gc?cron=true</code> v uvedené časy.
             </div>
           </div>
+          </>
         )}
       </div>
     </div>

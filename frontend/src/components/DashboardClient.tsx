@@ -14,10 +14,12 @@ export default function DashboardClient({
   accounts,
   transactions,
   categories,
+  tradingTotalCZK = 0,
 }: {
   accounts: Array<{ id: string; accountName: string; provider: string; balanceCZK: number; customName?: string | null; isVisible: boolean; institutionLogo?: string | null }>;
   transactions: TxRow[];
   categories: Array<{ id: string; name: string }>;
+  tradingTotalCZK?: number;
 }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -52,7 +54,7 @@ export default function DashboardClient({
   const sumExpense = expenses.reduce((a, b) => a + Math.abs(b.amountCZK), 0);
   const net = sumIncome - sumExpense;
 
-  const totalBalance = accounts.reduce((sum, account) => sum + (account.balanceCZK || 0), 0);
+  const totalBalance = accounts.reduce((sum, account) => sum + (account.balanceCZK || 0), 0) + (tradingTotalCZK || 0);
 
   const currentYearForOptions = new Date().getFullYear();
   const yearOptions = Array.from({ length: 6 }, (_, i) => currentYearForOptions - i);
